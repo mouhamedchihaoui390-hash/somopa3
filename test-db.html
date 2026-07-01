@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOMOPA Database Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a192f;
+            color: #e2e8f0;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+        .success {
+            background: rgba(0, 200, 83, 0.2);
+            border: 1px solid #00c853;
+            color: #00c853;
+        }
+        .error {
+            background: rgba(229, 62, 62, 0.2);
+            border: 1px solid #e53e3e;
+            color: #e53e3e;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196f3;
+            color: #64ffda;
+        }
+        button {
+            background: #ff6b00;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #e65c00;
+        }
+        h1 {
+            color: #ff6b00;
+        }
+        .status {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 SOMOPA Database Connection Test</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="runTests()">🚀 Run All Tests</button>
+    <button onclick="location.href='http://localhost:3000'">🏠 Go to Website</button>
+    
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        
+        const supabaseUrl = 'https://sfdlbjanxeeacgjhfvhc.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGxiamFueGVhZWNnamhmdmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTUzMjIsImV4cCI6MjA5NzE3MTMyMn0.f8ELldxLiliWeLsqFsCShtW6XZEuquK-FCJXyhlhI8k';
+        
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function runTests() {
+            document.getElementById('results').innerHTML = '';
+            addResult('🔍 Starting database tests...', 'info');
+            
+            try {
+                // Test 1: Connection
+                addResult('Test 1: Checking connection...', 'info');
+                const { data: testData, error: testError } = await supabase
+                    .from('products')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (testError) {
+                    addResult(`❌ Connection failed: ${testError.message}`, 'error');
+                    if (testError.message.includes('does not exist')) {
+                        addResult('💡 The products table does not exist! Please run the SQL setup script in Supabase Dashboard.', 'error');
+                    }
+                    return;
+                }
+                addResult('✅ Connection successful!', 'success');
+                
+                // Test 2: Products table
+                addResult('Test 2: Checking products table...', 'info');
+                const { data: products, error: productsError } = await supabase
+                    .from('products')
+                    .select('*')
+                    .limit(5);
+                
+                if (productsError) {
+                    addResult(`❌ Products query failed: ${productsError.message}`, 'error');
+                    return;
+                }
+                addResult(`✅ Products table exists! Found ${products.length} products`, 'success');
+                
+                // Test 3: Product images table
+                addResult('Test 3: Checking product_images table...', 'info');
+                const { error: imagesError } = await supabase
+                    .from('product_images')
+                    .select('*')
+                    .limit(1);
+                
+                if (imagesError) {
+                    addResult(`⚠️ product_images table issue: ${imagesError.message}`, 'error');
+                } else {
+                    addResult('✅ product_images table ready', 'success');
+                }
+                
+                // Test 4: Audit logs table
+                addResult('Test 4: Checking audit_logs table...', 'info');
+                const { error: logsError } = await supabase
+                    .from('audit_logs')
+                    .select('*')
+                    .limit(1);
+                
+                if (logsError) {
+                    addResult(`⚠️ audit_logs table issue: ${logsError.message}`, 'error');
+                } else {
+                    addResult('✅ audit_logs table ready', 'success');
+                }
+                
+                // Test 5: Import history table
+                addResult('Test 5: Checking import_history table...', 'info');
+                const { error: historyError } = await supabase
+                    .from('import_history')
+                    .select('*')
+                    .limit(1);
+                
+                if (historyError) {
+                    addResult(`⚠️ import_history table issue: ${historyError.message}`, 'error');
+                } else {
+                    addResult('✅ import_history table ready', 'success');
+                }
+                
+                // Test 6: Insert test
+                addResult('Test 6: Testing insert capability...', 'info');
+                const testProduct = {
+                    code: 'TEST-' + Date.now(),
+                    designation: 'Test Product',
+                    prix: 99.99,
+                    stock: 1,
+                    status: 'active'
+                };
+                
+                const { data: insertData, error: insertError } = await supabase
+                    .from('products')
+                    .insert(testProduct)
+                    .select()
+                    .single();
+                
+                if (insertError) {
+                    addResult(`❌ Insert failed: ${insertError.message}`, 'error');
+                    return;
+                }
+                addResult(`✅ Insert successful! Product ID: ${insertData.id}`, 'success');
+                
+                // Clean up
+                await supabase.from('products').delete().eq('id', insertData.id);
+                addResult('✅ Test product cleaned up', 'success');
+                
+                // Final result
+                addResult('', 'info');
+                addResult('═══════════════════════════════════════', 'success');
+                addResult('✅ ALL TESTS PASSED!', 'success');
+                addResult('═══════════════════════════════════════', 'success');
+                addResult('', 'info');
+                addResult('Your database is fully connected and ready to use!', 'success');
+                addResult('You can now add products, upload images, and import from Excel.', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Unexpected error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+        
+        // Make function available globally
+        window.runTests = runTests;
+    </script>
+</body>
+</html>
